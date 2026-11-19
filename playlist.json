@@ -1,0 +1,41 @@
+{
+  "title": "Library",
+  "items": [
+    {
+      "name": "Inception (2010)",
+      "url": "https://drive.google.com/file/d/REPLACE_WITH_FILE_ID_1/view",
+      "type": "video",
+      "size": "2.4 GB"
+    },
+    {
+      "name": "Interstellar (2014)",
+      "url": "https://drive.google.com/file/d/REPLACE_WITH_FILE_ID_2/view",
+      "size": "3.1 GB"
+    },
+    {
+      "name": "Wallpapers",
+      "type": "folder",
+      "items": [
+        {
+          "name": "Poster.jpg",
+          "url": "https://drive.google.com/file/d/REPLACE_WITH_IMAGE_ID/view",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "name": "Web Series",
+      "type": "folder",
+      "items": [
+        {
+          "name": "S01E01 - Pilot",
+          "url": "https://drive.google.com/file/d/REPLACE_WITH_EP1_ID/view"
+        },
+        {
+          "name": "S01E02 - Episode 2",
+          "url": "https://drive.google.com/file/d/REPLACE_WITH_EP2_ID/view"
+        }
+      ]
+    }
+  ]
+}
