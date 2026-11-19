@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DriveStream — Stream Google Drive Online</title>
+  <link rel="stylesheet" href="gdrive-stream/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">▶</span>
+      <div>
+        <h1>DriveStream</h1>
+        <p class="subtitle">Zero-API Google Drive Movie & Media Player</p>
+      </div>
+    </div>
+    <button id="settingsBtn" class="icon-btn" title="Optional Settings (Private Drive / Custom Proxy)">
+      ⚙ Settings
+    </button>
+  </header>
+
+  <main class="container">
+    <!-- Link Input Section -->
+    <section class="input-card">
+      <form id="linkForm" class="input-row">
+        <input
+          id="linkInput"
+          type="text"
+          placeholder="Paste public Google Drive folder or file link..."
+          autocomplete="off"
+          required
+        />
+        <button type="submit" id="loadBtn" class="primary-btn">Load</button>
+      </form>
+      <p class="hint">
+        Make sure your Drive folder is set to <strong>Anyone with the link → Viewer</strong>.
+        Works with folders, subfolders, movies, images, audio & direct file links.
+      </p>
+
+      <!-- Saved / Recent Folders -->
+      <div id="recentBar" class="recent-bar hidden">
+        <span class="recent-label">Saved:</span>
+        <div id="recentList" class="recent-list"></div>
+      </div>
+    </section>
+
+    <!-- Status / Error / Loading Banner -->
+    <div id="statusBanner" class="status-banner hidden"></div>
+
+    <!-- Controls Toolbar -->
+    <section id="toolbar" class="toolbar hidden">
+      <div class="toolbar-top">
+        <nav id="breadcrumbs" class="breadcrumbs"></nav>
+        <div class="toolbar-actions">
+          <button id="nativeFallbackBtn" class="secondary-btn" title="Switch between Custom UI and Google's Native Embed">
+            Native Grid
+          </button>
+        </div>
+      </div>
+
+      <div class="toolbar-bottom">
+        <div id="filterTabs" class="filter-tabs">
+          <button class="tab active" data-filter="all">All</button>
+          <button class="tab" data-filter="video">Videos</button>
+          <button class="tab" data-filter="image">Images</button>
+          <button class="tab" data-filter="audio">Audio</button>
+          <button class="tab" data-filter="folder">Folders</button>
+          <button class="tab" data-filter="other">Other</button>
+        </div>
+        <input
+          id="searchInput"
+          type="search"
+          class="search-input"
+          placeholder="Search files..."
+        />
+      </div>
+    </section>
+
+    <!-- Custom Media Grid -->
+    <section id="mediaGrid" class="media-grid"></section>
+
+    <!-- Native Google Embed Fallback -->
+    <section id="nativeContainer" class="native-container hidden">
+      <iframe id="nativeIframe" src="" frameborder="0"></iframe>
+    </section>
+  </main>
+
+  <!-- Media Player / Lightbox Modal -->
+  <div id="playerModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close="player"></div>
+    <div class="modal-content player-modal">
+      <div class="modal-header">
+        <div class="player-title-wrap">
+          <span id="playerBadge" class="badge">VIDEO</span>
+          <h2 id="playerTitle">Filename</h2>
+        </div>
+        <button id="closePlayerBtn" class="close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div id="playerStage" class="player-stage"></div>
+
+      <div class="player-controls">
+        <div id="videoModeGroup" class="mode-group hidden">
+          <button id="modePreviewBtn" class="chip-btn active">Adaptive Player (Recommended)</button>
+          <button id="modeDirectBtn" class="chip-btn">Raw HTML5 Video</button>
+        </div>
+
+        <div id="navGroup" class="nav-group hidden">
+          <button id="prevMediaBtn" class="secondary-btn">← Prev</button>
+          <button id="nextMediaBtn" class="secondary-btn">Next →</button>
+        </div>
+
+        <div class="external-links">
+          <a id="openDriveLink" href="#" target="_blank" rel="noopener" class="secondary-btn">Open in Drive ↗</a>
+          <a id="downloadLink" href="#" target="_blank" rel="noopener" class="secondary-btn">Download ↓</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Optional Settings Modal -->
+  <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close="settings"></div>
+    <div class="modal-content settings-modal">
+      <div class="modal-header">
+        <h2>Optional Settings</h2>
+        <button id="closeSettingsBtn" class="close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="settings-body">
+        <p class="settings-note">
+          Public folders work out of the box with <strong>zero setup</strong>.
+          Use the optional fields below only if you want private folder support or your own dedicated proxy.
+          All values stay strictly in your browser's <code>localStorage</code>.
+        </p>
+
+        <label class="field">
+          <span>Google Apps Script Web App URL (Unlocks Private Folders + 100% Reliability)</span>
+          <input id="appsScriptInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+        </label>
+
+        <label class="field">
+          <span>Custom CORS Proxy / Cloudflare Worker URL (Optional)</span>
+          <input id="workerInput" type="url" placeholder="https://your-worker.workers.dev/?url=" />
+        </label>
+
+        <label class="field">
+          <span>Google Drive API v3 Key (Optional)</span>
+          <input id="apiKeyInput" type="text" placeholder="AIzaSy..." />
+        </label>
+      </div>
+
+      <div class="settings-footer">
+        <button id="clearSettingsBtn" class="secondary-btn">Reset to Zero-Config</button>
+        <button id="saveSettingsBtn" class="primary-btn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="gdrive-stream/app.js"></script>
+</body>
+</html>
