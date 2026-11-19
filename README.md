@@ -11,9 +11,10 @@ A static, **zero-API-key** web app for GitHub Pages that lets you stream movies,
 - **Optional Private Folder Mode:** Unlock private Drive folders using a free 25-line Google Apps Script (no Google Cloud Console or API keys needed).
 
 ## Quick Deploy on GitHub Pages
-The site entry point (`index.html`) is now at the repository root. In **Settings → Pages**, choose **Deploy from a branch**, select `main` and `/(root)`, then click **Save**. Open the published site at `https://<your-username>.github.io/<repo-name>/`.
-
-The app's CSS and JavaScript are loaded from `gdrive-stream/` so the existing files remain available while the root entry point serves the site.
+1. Fork or upload `index.html`, `style.css`, `app.js`, and `README.md` to a public GitHub repository.
+2. Go to **Settings → Pages**.
+3. Under **Build and deployment**, select **Deploy from a branch**, pick `main` and `/ (root)`, then click **Save**.
+4. Open your live site at `https://<your-username>.github.io/<repo-name>/`.
 
 ---
 
@@ -53,4 +54,3 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
-```
