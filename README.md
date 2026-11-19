@@ -1,28 +1,23 @@
-# DriveStream
+# GStreams
 
-A static, **zero-API-key** web app for GitHub Pages that lets you stream movies, view images, and browse subfolders straight from a Google Drive link—without downloading files to your phone.
+Static web player for browsing and streaming videos, images, and audio from Google Drive links directly in the browser.
 
-## Features
-- **Zero Setup for Public Folders:** Paste any Google Drive folder shared as *"Anyone with the link → Viewer"* and play immediately.
-- **Adaptive Video Streaming:** Uses Google's server-side transcoded player (handles large MKV, MP4, HEVC files smoothly on mobile data), plus an optional raw HTML5 `<video>` toggle.
-- **Subfolder Navigation, Search & Filters:** Filter by Videos, Images, Audio, Folders, or search by filename.
-- **Built-in Fallback:** Automatically offers Google's Native Grid embed if public CORS relays are temporarily busy.
-- **Bookmarkable & Saved Folders:** Saves recent folders in `localStorage` and supports shareable `?folder=FOLDER_ID` URLs.
-- **Optional Private Folder Mode:** Unlock private Drive folders using a free 25-line Google Apps Script (no Google Cloud Console or API keys needed).
+## Usage
+1. Share a Google Drive folder as **Anyone with the link (Viewer)**.
+2. Paste the folder or file URL into GStreams.
+3. Click any file to stream or view in-page.
 
-## Quick Deploy on GitHub Pages
-1. Fork or upload `index.html`, `style.css`, `app.js`, and `README.md` to a public GitHub repository.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, select **Deploy from a branch**, pick `main` and `/ (root)`, then click **Save**.
-4. Open your live site at `https://<your-username>.github.io/<repo-name>/`.
+Supports `?folder=<ID>` and `?file=<ID>` URL parameters for bookmarking.
 
----
+## Deploy on GitHub Pages
+1. Push `index.html`, `style.css`, and `app.js` to a GitHub repository.
+2. Open **Settings → Pages**.
+3. Set source to `main` branch, `/ (root)` folder, and save.
 
-## Optional Upgrade 1: Unlock Private Folders (Google Apps Script)
-If you want to browse **private** folders (without making them public) or want 100% uptime without public CORS relays:
+## Private Folders (Apps Script)
+To list private folders without changing sharing permissions:
 
-1. Open [script.google.com](https://script.google.com/) and create a **New Project**.
-2. Paste the code below and click **Save**:
+1. Create a new project at [script.google.com](https://script.google.com/) and paste:
 
 ```javascript
 function doGet(e) {

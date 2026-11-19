@@ -1,30 +1,35 @@
 (() => {
-  // ===== Storage Keys & Public CORS Relay Chain =====
-  const STORAGE_SETTINGS = "drivestream_settings_v1";
-  const STORAGE_RECENTS = "drivestream_recents_v1";
+  const STORAGE_SETTINGS = "gstreams_settings_v1";
+  const STORAGE_RECENTS = "gstreams_recents_v1";
 
-  const PUBLIC_CORS_RELAYS = [
+  const CORS_RELAYS = [
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
     (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   ];
 
-  // ===== App State =====
+  const ICONS = {
+    folder: `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>`,
+    video: `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,9 15,12 10,15" fill="currentColor" stroke="none"/></svg>`,
+    image: `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/></svg>`,
+    audio: `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+    other: `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+  };
+
   const state = {
     currentFolderId: null,
-    breadcrumbs: [], // [{ id, name }]
+    breadcrumbs: [],
     items: [],
     filteredItems: [],
     activeFilter: "all",
     searchQuery: "",
     nativeMode: false,
     activeMedia: null,
-    videoMode: "preview", // 'preview' | 'direct'
+    videoMode: "preview",
     settings: loadSettings(),
     recents: loadRecents(),
   };
 
-  // ===== DOM Elements =====
   const el = {
     linkForm: document.getElementById("linkForm"),
     linkInput: document.getElementById("linkInput"),
@@ -41,7 +46,6 @@
     mediaGrid: document.getElementById("mediaGrid"),
     nativeContainer: document.getElementById("nativeContainer"),
     nativeIframe: document.getElementById("nativeIframe"),
-    // Player modal
     playerModal: document.getElementById("playerModal"),
     closePlayerBtn: document.getElementById("closePlayerBtn"),
     playerTitle: document.getElementById("playerTitle"),
@@ -55,7 +59,6 @@
     nextMediaBtn: document.getElementById("nextMediaBtn"),
     openDriveLink: document.getElementById("openDriveLink"),
     downloadLink: document.getElementById("downloadLink"),
-    // Settings modal
     settingsModal: document.getElementById("settingsModal"),
     closeSettingsBtn: document.getElementById("closeSettingsBtn"),
     appsScriptInput: document.getElementById("appsScriptInput"),
@@ -65,14 +68,12 @@
     clearSettingsBtn: document.getElementById("clearSettingsBtn"),
   };
 
-  // ===== Initialization =====
   init();
 
   function init() {
     renderRecents();
     bindEvents();
 
-    // Check URL query parameters (?folder=ID or ?file=ID)
     const params = new URLSearchParams(window.location.search);
     const folderParam = params.get("folder");
     const fileParam = params.get("file");
@@ -84,7 +85,7 @@
       el.linkInput.value = `https://drive.google.com/file/d/${fileParam}/view`;
       openMediaModal({
         id: fileParam,
-        name: "Direct Drive File",
+        name: "Drive File",
         type: "video",
       });
     }
@@ -138,7 +139,6 @@
       loadFolder(target.id);
     });
 
-    // Player modal controls
     el.closePlayerBtn.addEventListener("click", closePlayerModal);
     document.querySelector('[data-close="player"]').addEventListener("click", closePlayerModal);
 
@@ -155,7 +155,6 @@
     el.prevMediaBtn.addEventListener("click", () => stepMedia(-1));
     el.nextMediaBtn.addEventListener("click", () => stepMedia(1));
 
-    // Settings modal controls
     el.settingsBtn.addEventListener("click", openSettingsModal);
     el.closeSettingsBtn.addEventListener("click", closeSettingsModal);
     document.querySelector('[data-close="settings"]').addEventListener("click", closeSettingsModal);
@@ -165,10 +164,9 @@
       localStorage.removeItem(STORAGE_SETTINGS);
       populateSettingsInputs();
       closeSettingsModal();
-      showStatus("Settings cleared — running in Zero-Config public mode.", "info");
+      showStatus("Settings cleared.", "info");
     });
 
-    // Keyboard shortcuts
     window.addEventListener("keydown", (e) => {
       if (!el.playerModal.classList.contains("hidden")) {
         if (e.key === "Escape") closePlayerModal();
@@ -180,30 +178,25 @@
     });
   }
 
-  // ===== URL Parsing =====
   function parseDriveInput(raw) {
     if (!raw) return null;
 
-    // Folder patterns
     const folderMatch =
       raw.match(/\/folders\/([a-zA-Z0-9_-]{10,})/) ||
       raw.match(/embeddedfolderview\?id=([a-zA-Z0-9_-]{10,})/) ||
       raw.match(/folderview\?id=([a-zA-Z0-9_-]{10,})/);
     if (folderMatch) return { kind: "folder", id: folderMatch[1] };
 
-    // File patterns
     const fileMatch =
       raw.match(/\/file\/d\/([a-zA-Z0-9_-]{10,})/) ||
       raw.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
     if (fileMatch) {
-      // /open?id= can be folder or file; treat /file/d/ as file, open?id= as folder fallback
       if (raw.includes("/file/d/") || raw.includes("/uc?")) {
         return { kind: "file", id: fileMatch[1] };
       }
       return { kind: "folder", id: fileMatch[1] };
     }
 
-    // Raw ID pasted directly
     if (/^[a-zA-Z0-9_-]{15,}$/.test(raw)) {
       return { kind: "folder", id: raw };
     }
@@ -214,14 +207,14 @@
   function handleLinkSubmit(raw) {
     const parsed = parseDriveInput(raw);
     if (!parsed) {
-      showStatus("Invalid Google Drive link. Paste a Drive folder URL or file URL.", "error");
+      showStatus("Invalid Google Drive link.", "error");
       return;
     }
 
     if (parsed.kind === "file") {
       openMediaModal({
         id: parsed.id,
-        name: "Google Drive File",
+        name: "Drive File",
         type: "video",
       });
       return;
@@ -230,7 +223,7 @@
     openRootFolder(parsed.id);
   }
 
-  function openRootFolder(folderId, label = "Root Folder") {
+  function openRootFolder(folderId, label = "Root") {
     state.breadcrumbs = [{ id: folderId, name: label }];
     updateUrlQuery("folder", folderId);
     loadFolder(folderId, true);
@@ -241,7 +234,6 @@
     loadFolder(folderId, false);
   }
 
-  // ===== Folder Loading Pipeline =====
   async function loadFolder(folderId, saveToRecent = false) {
     state.currentFolderId = folderId;
     state.nativeMode = false;
@@ -251,7 +243,7 @@
     el.toolbar.classList.remove("hidden");
     renderBreadcrumbs();
 
-    showStatus("Loading folder contents...", "info");
+    showStatus("Loading folder...", "info");
     el.mediaGrid.innerHTML = "";
 
     try {
@@ -279,18 +271,13 @@
       applyFiltersAndRender();
     } catch (err) {
       console.error(err);
-      showStatus(
-        `${err.message} — You can still browse using Google's Native Grid fallback.`,
-        "error",
-        {
-          label: "Open Native Grid",
-          onClick: () => toggleNativeMode(true),
-        }
-      );
+      showStatus(err.message, "error", {
+        label: "Open Native Grid",
+        onClick: () => toggleNativeMode(true),
+      });
     }
   }
 
-  // Strategy 1 (Default Zero-API): Scrape public embeddedfolderview via CORS relay chain
   async function fetchViaEmbeddedScrape(folderId) {
     const targetUrl = `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#list`;
     const relays = [];
@@ -299,16 +286,16 @@
       const base = state.settings.workerUrl;
       relays.push((u) => (base.includes("=") ? `${base}${encodeURIComponent(u)}` : `${base}?url=${encodeURIComponent(u)}`));
     }
-    relays.push(...PUBLIC_CORS_RELAYS);
+    relays.push(...CORS_RELAYS);
 
     let html = null;
-    let lastError = "Could not reach public CORS relays.";
+    let lastError = "Proxy request failed";
 
     for (const buildUrl of relays) {
       try {
         const res = await fetchWithTimeout(buildUrl(targetUrl), 9000);
         if (!res.ok) {
-          lastError = `Relay returned HTTP ${res.status}`;
+          lastError = `HTTP ${res.status}`;
           continue;
         }
         const text = await res.text();
@@ -317,21 +304,20 @@
           break;
         }
       } catch (e) {
-        lastError = e.message || "Network timeout";
+        lastError = e.message || "Request timeout";
       }
     }
 
     if (!html) {
-      throw new Error(`Unable to fetch folder list (${lastError}).`);
+      throw new Error(`Could not load folder (${lastError}).`);
     }
 
-    // Detect private / login-required response
     if (
       html.includes("accounts.google.com/ServiceLogin") ||
       html.includes("You need access") ||
       /<title>\s*Sign in/i.test(html)
     ) {
-      throw new Error("This folder is private. Set sharing to 'Anyone with the link → Viewer', or add an Apps Script URL in Settings.");
+      throw new Error("Folder is private. Set sharing to public or configure an Apps Script URL in Settings.");
     }
 
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -339,9 +325,7 @@
 
     const itemsMap = new Map();
 
-    // Primary parser: .flip-entry nodes
-    const entries = doc.querySelectorAll(".flip-entry");
-    entries.forEach((entry) => {
+    doc.querySelectorAll(".flip-entry").forEach((entry) => {
       const link = entry.querySelector("a[href]");
       if (!link) return;
       const href = link.getAttribute("href") || "";
@@ -356,7 +340,6 @@
       }
     });
 
-    // Secondary fallback parser: scan all Drive links if markup varies
     if (itemsMap.size === 0) {
       doc.querySelectorAll("a[href]").forEach((a) => {
         const href = a.getAttribute("href") || "";
@@ -402,11 +385,10 @@
     return null;
   }
 
-  // Strategy 2 (Optional): Google Apps Script Web App (supports private folders too)
   async function fetchViaAppsScript(folderId, scriptUrl) {
     const sep = scriptUrl.includes("?") ? "&" : "?";
     const res = await fetchWithTimeout(`${scriptUrl}${sep}id=${encodeURIComponent(folderId)}`, 15000);
-    if (!res.ok) throw new Error(`Apps Script returned HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`Apps Script error (HTTP ${res.status}).`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
@@ -420,14 +402,13 @@
     return { folderName: data.folderName || null, items };
   }
 
-  // Strategy 3 (Optional): Google Drive API v3 Key
   async function fetchViaDriveApi(folderId, apiKey) {
     const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
     const fields = encodeURIComponent("files(id,name,mimeType,size)");
     const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${encodeURIComponent(apiKey)}`;
 
     const res = await fetchWithTimeout(url, 12000);
-    if (!res.ok) throw new Error(`Drive API error (HTTP ${res.status}). Check your API key or folder permissions.`);
+    if (!res.ok) throw new Error(`Drive API error (HTTP ${res.status}).`);
     const data = await res.json();
 
     const items = (data.files || []).map((f) => ({
@@ -443,7 +424,6 @@
     return { folderName: null, items };
   }
 
-  // ===== Type Detection & Sorting =====
   function detectMediaType(name, mimeType, iconSrc) {
     const lowerName = (name || "").toLowerCase();
     const lowerMime = (mimeType || "").toLowerCase();
@@ -486,7 +466,6 @@
     });
   }
 
-  // ===== Rendering =====
   function applyFiltersAndRender() {
     state.filteredItems = state.items.filter((item) => {
       const matchType = state.activeFilter === "all" || item.type === state.activeFilter;
@@ -499,33 +478,22 @@
 
   function renderGrid() {
     if (state.filteredItems.length === 0) {
-      el.mediaGrid.innerHTML = `
-        <div class="empty-state">
-          No matching files found in this folder.
-        </div>`;
+      el.mediaGrid.innerHTML = `<div class="empty-state">No files found.</div>`;
       return;
     }
-
-    const icons = {
-      folder: "📁",
-      video: "🎬",
-      image: "🖼️",
-      audio: "🎵",
-      other: "📄",
-    };
 
     el.mediaGrid.innerHTML = state.filteredItems
       .map((item, idx) => {
         const showThumb = item.type === "video" || item.type === "image";
         const thumbUrl = `https://drive.google.com/thumbnail?id=${encodeURIComponent(item.id)}&sz=w500`;
-        const icon = icons[item.type] || "📄";
+        const icon = ICONS[item.type] || ICONS.other;
 
         return `
           <article class="card" data-idx="${idx}">
             <div class="thumb-wrap">
               ${
                 showThumb
-                  ? `<img src="${thumbUrl}" alt="" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                  ? `<img src="${thumbUrl}" alt="" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />
                      <span class="thumb-fallback" style="display:none">${icon}</span>`
                   : `<span class="thumb-fallback">${icon}</span>`
               }
@@ -566,7 +534,6 @@
     }
   }
 
-  // ===== Media Player / Lightbox =====
   function openMediaModal(item) {
     state.activeMedia = item;
     state.videoMode = "preview";
@@ -576,10 +543,8 @@
     el.openDriveLink.href = `https://drive.google.com/file/d/${encodeURIComponent(item.id)}/view`;
     el.downloadLink.href = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(item.id)}`;
 
-    // Show video engine toggle only for videos
     el.videoModeGroup.classList.toggle("hidden", item.type !== "video");
 
-    // Show prev/next navigation if there are multiple playable items in list
     const playable = getPlayableSiblings();
     el.navGroup.classList.toggle("hidden", playable.length <= 1);
 
@@ -610,13 +575,12 @@
 
       el.playerStage.innerHTML = `
         <video controls autoplay playsinline src="${directSrc}">
-          Your browser does not support direct playback for this format. Switch back to Adaptive Player.
+          Format not supported in direct mode. Switch to Embed Player.
         </video>
       `;
       return;
     }
 
-    // Default: Google Drive Adaptive Preview Iframe (handles MKV, HEVC, 1080p, audio, PDFs)
     el.playerStage.innerHTML = `
       <iframe
         src="https://drive.google.com/file/d/${id}/preview"
@@ -627,7 +591,7 @@
   }
 
   function closePlayerModal() {
-    el.playerStage.innerHTML = ""; // Stop video/audio playback immediately
+    el.playerStage.innerHTML = "";
     el.playerModal.classList.add("hidden");
     state.activeMedia = null;
     document.body.style.overflow = "";
@@ -647,7 +611,6 @@
     openMediaModal(playable[nextIdx]);
   }
 
-  // ===== Saved / Recent Folders =====
   function loadRecents() {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_RECENTS) || "[]");
@@ -698,7 +661,6 @@
     });
   }
 
-  // ===== Optional Settings =====
   function loadSettings() {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_SETTINGS) || '{"appsScriptUrl":"","workerUrl":"","apiKey":""}');
@@ -730,13 +692,12 @@
     };
     localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(state.settings));
     closeSettingsModal();
-    showStatus("Settings saved locally in your browser.", "info");
+    showStatus("Settings saved.", "info");
     if (state.currentFolderId) {
       loadFolder(state.currentFolderId, false);
     }
   }
 
-  // ===== Utilities =====
   async function fetchWithTimeout(url, timeoutMs) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -768,9 +729,7 @@
       const url = new URL(window.location.href);
       url.searchParams.set(key, val);
       window.history.replaceState({}, "", url);
-    } catch {
-      // Ignore on file:// origins
-    }
+    } catch {}
   }
 
   function formatBytes(bytes) {
